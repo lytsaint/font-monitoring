@@ -6,7 +6,7 @@
  * @param 2、需要登录， user
  */
 
-const editRedis = require('./../module/index');
+const editMysql = require('./../module/index');
 
 class oauth {
 
@@ -33,15 +33,15 @@ class oauth {
             };
         }
 
-        const val = await new editRedis().get(token + '_front_sam_zhang');
-        
+        const val = await new editMysql().selectToken(token);
+
         if (!val) {
             ctx.body = {
                 msg: '请登录',
                 success: false
             };
         }
-
+        
         await next();
     }
 

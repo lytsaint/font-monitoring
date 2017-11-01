@@ -1,18 +1,23 @@
-const redis = require('./../server/redis');
-const crypt = require('./../ctypto/ctypto').crypt;
 
-const {
-    user,
-    t,
-    register
-} = require('./../config/default');
+const crypt = require('./../ctypto/ctypto').crypt;
 const moment = require('moment');
 
 /**
- * @param edit redis
+ * @param 用户信息操作
+ * 2017-10-28
+ * 在写代码的时候，突然发现登录逻辑不对，于是出现了下列操作：
+ * del,del,del,del.
+ * 第四次重写。
+ * 用户信息：
+ * 1、注册的时候，存入user表，返回userid，生成token，存入token表，对应存入token外键  userid .
+ * 2、登录的时候，根据username查询user表的相对应的userid，同时生成token，存入token表，对应存入token外键  userid。
+ * 同时：登录逻辑，token逻辑完毕。
+ * 写这里很郁闷，突然醍醐灌顶。。。
+ * 遗留一个问题：数据库中 token字段到期后没有自动删除。。缺少一个事务。
+ * 
  */
 
-const editRedis = require('./../module/index');
+const editMysql = require('./../module/index');
 
 class ApiUser {
 
@@ -21,8 +26,6 @@ class ApiUser {
     static async register(ctx) {
 
         let d = ctx.request.body;
-        const time = moment().format('YYYY-MM-DD HH:mm:ss');
-        d.time = time;
 
         if (!d) {
             ctx.body  = {
@@ -34,9 +37,9 @@ class ApiUser {
 
         const token = crypt.creatToken(d);
 
-        new editRedis().hset(register.register, d.username, JSON.stringify(d));
+        const data = await new editMysql().userSet(d.username, d.nickname, d.password);
 
-        new editRedis().set(token, d.password, 'EX', t.time);
+        new editMysql().tokenSet(token, data.id);
 
         ctx.cookies.set('token', token);
 
@@ -53,28 +56,13 @@ class ApiUser {
 
         let isRegist = await isRegister(ctx);
 
-        if (d.username == user.username && d.password == user.password) {
-
-            const token = crypt.creatToken(user);
-
-            new editRedis().set(token, user.username, 'EX', t.time);
-
-            ctx.cookies.set('token', token);
-
-            ctx.body  = {
-                msg: '成功',
-                success: true
-            };
-
-        } else if (isRegist) {
-
-            isRegist = JSON.parse(isRegist);
+        if (isRegist) {
 
             if (isRegist.username == d.username && isRegist.password == d.password) {
 
                 const tdata = crypt.creatToken(d);
 
-                new editRedis().set(tdata, d.username, 'EX', t.time);
+                new editMysql().tokenSet(tdata, isRegist.id);
 
                 ctx.cookies.set('token', tdata);
 
@@ -107,12 +95,7 @@ class ApiUser {
                 success: true
             };
         }
-        new editRedis().get(token + '_front_sam_zhang').then(function (value) {
-
-            redis.del(token + '_front_sam_zhang');
-            redis.del(value);
-
-        });
+        new editMysql().userLayout(token);
 
         ctx.cookies.set('token', '');
 
@@ -125,40 +108,24 @@ class ApiUser {
     // 获取个人信心接口，只针对注册用户，除配置用户以外
 
     static async userInfo(ctx, next) {
-
         const token = ctx.cookies.get('token');
 
         if (token) {
 
-            const userinfo = await new editRedis().get(token + '_front_sam_zhang');
+            const a = await new editMysql().selectToken(token);
+            const b = await new editMysql().selectTokenIdUser(a.userId);
 
-            /**
-             * 直接写死zhangsam超级账户
-             */
+            const time = b.createdAt;
 
-            if (userinfo == 'zhangsam') {
-                return ctx.body  = {
-                    success: true,
-                    msg: '成功',
-                    data: {
-                        username: 'Sam Zhang',
-                        nickname: 'ZhangSam',
-                        time: '2017-06-20'
-                    }
-                };
-            }
-
-            let data = await new editRedis().hget(register.register, userinfo);
-
-            data = JSON.parse(data);
-
-            delete data.password;
-
-            if (data) {
+            if (b) {
                 ctx.body  = {
                     success: true,
                     msg: '成功',
-                    data: data
+                    data: {
+                        username: b.username,
+                        nickname: b.nickname,
+                        time: moment(time).format('YYYY-MM-DD HH:mm:ss')
+                    }
                 };
             } else {
                 ctx.body  = {
@@ -172,6 +139,8 @@ class ApiUser {
                 msg: '请登录'
             };
         }
+
+        await next();
     }
 }
 
@@ -182,7 +151,7 @@ const isRegister = async(ctx) => {
 
     const data = ctx.request.body;
 
-    const d = await new editRedis().hget(register.register, data.username);
+    const d = await new editMysql().selectUser(data.username);
 
     if (d) {
         return d;

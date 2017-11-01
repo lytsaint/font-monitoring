@@ -50,14 +50,12 @@ router
     .get('/plugin/api/getBasic', oauth.user, api.getBasic)
     .post('/plugin/api/setHtmlError', oauth.pass, api.setHtmlError)
     .get('/plugin/api/getHtmlError', oauth.user, api.getHtmlError)
-    .get('/plugin/api/getLogs', oauth.user, api.getLogs)
     .get('/plugin/api/pageError', oauth.user, api.pageError)
     .get('/plugin/api/typeErr', oauth.user, api.getTypeErr)
     .get('/plugin/api/getUrlErr', oauth.user, api.getUrlErr)
     .post('/plugin/api/layout', user.layOut)
     .post('/plugin/api/setPlug', oauth.pass, api.setPlug)
     .get('/plugin/api/getPlug', oauth.pass, api.getPlug)
-    .post('/plugin/api/delAndirPlug', oauth.pass, api.deleteAndirPlug)
     .post('/plugin/api/settingPlug', oauth.pass, api.settingPlug)
     .post('/plugin/api/setPlugList', oauth.pass, api.setPlugList)
     .get('/plugin/api/getPlugList', oauth.pass, api.getPlugList)
@@ -65,8 +63,8 @@ router
     .get('/plugin/api/getPlugListInfo', oauth.pass, api.getPlugListInfo)
     .post('/plugin/api/delPlug', oauth.pass, api.delPlug)
     .get('/plugin/api/getPlugDownloads', oauth.pass, api.getPlugDownloads)
-    .post('/plugin/api/isLogin', api.isLogin)
-    .get('/plugin/api/getBrowser', oauth.user, api.getBrowser);
+    .post('/plugin/api/isLogin', api.isLogin);
+    // .get('/plugin/api/getBrowser', oauth.user, api.getBrowser);
 
 
 /**

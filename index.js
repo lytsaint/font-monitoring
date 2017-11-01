@@ -141,6 +141,7 @@
             return true;
         }
         var eMs = {};
+        eObj = !eObj ? {} : eObj;
         if (!eObj && !eObj.stack) {
             eMs.sMsg = eObj.stack.toString();
         } else if (arguments.callee) {
@@ -157,6 +158,10 @@
                 f = f.caller;
             }
             ext = ext.join(',');
+
+            if (typeof eObj.stack == 'undefined') {
+                eObj.stack = '';
+            }
             eMs.sMsg = eObj.stack.toString();
         }
         eMs.sUrl = sUrl;
@@ -187,10 +192,12 @@
                 sUrl: o.sUrl,
                 sLine: o.sLine,
                 sColu: o.sColu,
-                eObj: o.eObj ? o.eObj.stack : ''
+                eObj: o.eObj ? o.eObj.stack : '',
+                sTime: getTime.getTime(),
+                browerType: '$1'
             };
             var d = JSON.stringify(data);
-            var t = o.sMsg.split(':')[1].replace(/\s+/g, '');
+            var t = !o.sMsg ? '' : o.sMsg.split(':')[1].replace(/\s+/g, '');
             t = t.substr(0, t.length / 2);
 
             /**
@@ -264,9 +271,8 @@
             request.open('post', url, true);
             request.setRequestHeader('Content-type', 'application/json'); // 发送信息至服务器时内容编码类型
             request.onreadystatechange = function () {
-                if (request.readyState == 4 && (request.status == 200 || request.status == 304)) { // 304未修改
-                    if (fn)
-                        fn.call(this, request.responseText);
+                if (request.readyState == 4 && request.status == 200 || request.status == 304) { // 304未修改
+                    fn.call(this, request.responseText);
                     console.log('调用成功', url);
                 }
                 console.log('调用不成功，url地址不对或者服务有问题或者网络问题。', url);
@@ -336,7 +342,7 @@
     var isSendData = netState();
 
     // if (isSendData) {
-    Ajax.post(packJSON.httpUrlBasic, dataBody);
+    Ajax.post(packJSON.httpUrlBasic, dataBody, function(){});
     if (typeof dataErrorBody !== 'undefined') {
         Ajax.post(packJSON.httpUrl, dataErrorBody, function (data) {
             var date = JSON.parse(data);
